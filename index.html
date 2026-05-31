@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Web前端界面层次可视化系统 — 组件依赖、路由关系、数据流向的层次化图形展示与交互平台">
+  <title>Web 前端界面层次可视化系统</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>前端层次可视化系统</h1>
+      <p>Frontend Hierarchy Visualizer</p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">可视化视图</div>
+        <button class="nav-btn active" data-view="component-tree" id="nav-component-tree">
+          <span class="icon">🌳</span><span>组件层次树</span>
+        </button>
+        <button class="nav-btn" data-view="dependency-graph" id="nav-dependency-graph">
+          <span class="icon">🔗</span><span>依赖关系图</span>
+        </button>
+        <button class="nav-btn" data-view="route-sunburst" id="nav-route-sunburst">
+          <span class="icon">☀️</span><span>路由层级图</span>
+        </button>
+        <button class="nav-btn" data-view="module-treemap" id="nav-module-treemap">
+          <span class="icon">📦</span><span>模块矩形树图</span>
+        </button>
+        <button class="nav-btn" data-view="data-flow" id="nav-data-flow">
+          <span class="icon">⚡</span><span>数据流向图</span>
+        </button>
+        <button class="nav-btn" data-view="overview" id="nav-overview">
+          <span class="icon">🩺</span><span>架构诊断</span>
+        </button>
+      </div>
+
+      <div class="nav-section" style="margin-top:16px">
+        <div class="nav-section-title">数据源</div>
+        <div style="padding:4px 8px;font-size:12px;color:#94a3b8">
+          当前: <span id="data-source" style="color:#818cf8;font-weight:500">示例数据</span>
+        </div>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-upload" id="btn-upload">
+        <span>📂</span><span>上传项目文件</span>
+      </button>
+      <button class="btn-upload" id="btn-reset" style="margin-top:8px;border-color:rgba(16,185,129,.3);color:#10b981;background:rgba(16,185,129,.06)">
+        <span>🔄</span><span>恢复示例数据</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <div class="main">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <span id="view-title" style="font-size:14px;font-weight:600;color:#818cf8;min-width:100px">组件层次树</span>
+      <div class="toolbar-sep"></div>
+
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="搜索节点…" autocomplete="off">
+      </div>
+
+      <div class="toolbar-sep"></div>
+
+      <div class="toolbar-group" id="depth-group">
+        <span class="toolbar-label">展开深度</span>
+        <input type="range" class="depth-slider" id="depth-slider" min="1" max="8" value="4">
+        <span class="depth-val" id="depth-val">4</span>
+      </div>
+
+      <div class="toolbar-group" id="external-group" style="display:none">
+        <label class="toolbar-label" style="cursor:pointer;display:flex;align-items:center;gap:5px">
+          <input type="checkbox" id="toggle-external" checked> 外部依赖
+        </label>
+      </div>
+
+      <div class="toolbar-right">
+        <button class="btn-icon" id="btn-export" title="导出当前视图为 SVG">⬇</button>
+        <button class="btn-icon" id="btn-fullscreen" title="全屏">⛶</button>
+      </div>
+    </div>
+
+    <!-- Visualization Canvas -->
+    <div class="canvas-wrap" id="viz-canvas"></div>
+
+    <!-- Detail Panel -->
+    <div class="detail-panel" id="detail-panel">
+      <button class="detail-close" id="detail-close">✕</button>
+      <div id="detail-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Upload Modal ===== -->
+<div class="modal-overlay" id="upload-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>📂 上传项目文件</h2>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="upload-tabs">
+        <button class="upload-tab active" data-tab="dir">上传项目目录</button>
+        <button class="upload-tab" data-tab="json">上传 JSON 配置</button>
+      </div>
+
+      <!-- Directory Upload Pane -->
+      <div class="upload-pane" id="pane-dir">
+        <div class="upload-zone" id="dir-zone">
+          <div class="uz-icon">📁</div>
+          <h3>选择项目文件夹</h3>
+          <p>系统将自动分析项目结构、组件依赖和路由关系</p>
+        </div>
+        <input type="file" id="dir-input" webkitdirectory multiple style="display:none">
+        <div class="upload-info">
+          <strong>支持的项目类型：</strong><br>
+          React / Vue / Angular / Next.js / Nuxt 等前端项目<br><br>
+          <strong>自动解析内容：</strong><br>
+          ✅ 文件层次结构 → 组件树 & 矩形树图<br>
+          ✅ <code>import</code> / <code>require</code> 语句 → 依赖关系图<br>
+          ✅ pages / views 目录 → 路由层级图<br>
+          ✅ 文件大小 → 模块体积分析
+        </div>
+      </div>
+
+      <!-- JSON Upload Pane -->
+      <div class="upload-pane" id="pane-json" style="display:none">
+        <div class="upload-zone" id="json-zone">
+          <div class="uz-icon">📄</div>
+          <h3>拖放或选择 JSON 文件</h3>
+          <p>支持自定义数据格式配置</p>
+        </div>
+        <input type="file" id="json-input" accept=".json" style="display:none">
+        <div class="upload-info">
+          <strong>JSON 格式说明：</strong><br>
+          支持以下字段（可选）：<br>
+          <code>componentTree</code> — 组件树（层次结构）<br>
+          <code>dependency</code> — 依赖关系（nodes + links）<br>
+          <code>routes</code> — 路由层级<br>
+          <code>treemap</code> — 模块大小<br>
+          <code>dataflow</code> — 数据流向<br><br>
+          或直接上传一个 <code>{name, children}</code> 格式的树形 JSON
+        </div>
+      </div>
+
+      <div class="upload-progress" style="display:none">
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <div class="progress-text">准备中…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div id="tooltip" class="tooltip"></div>
+
+<!-- Scripts -->
+<script src="js/vendor/d3.v7.min.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/data.js"></script>
+<script src="js/analyzer.js"></script>
+<script src="js/component-tree.js"></script>
+<script src="js/dependency-graph.js"></script>
+<script src="js/route-sunburst.js"></script>
+<script src="js/module-treemap.js"></script>
+<script src="js/data-flow.js"></script>
+<script src="js/overview.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

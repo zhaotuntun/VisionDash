@@ -1,0 +1,11 @@
+{
+  "name": "frontend-hierarchy-visualizer",
+  "version": "1.0.0",
+  "description": "Web 前端界面层次可视化系统 — 组件依赖、路由关系、数据流向、循环依赖诊断的层次化可视化平台",
+  "scripts": {
+    "test": "node tests/analyzer.test.js && node tests/component-tree-depth.test.js && node tests/integration.test.js",
+    "serve": "node -e \"const h=require('http'),f=require('fs'),p=require('path');h.createServer((q,s)=>{let u=decodeURIComponent(q.url.split('?')[0]);if(u==='/')u='/index.html';const fp=p.join(process.cwd(),u);f.readFile(fp,(e,d)=>{if(e){s.writeHead(404);return s.end('404');}const t={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml'}[p.extname(fp)]||'application/octet-stream';s.writeHead(200,{'content-type':t});s.end(d);});}).listen(8080,()=>console.log('serving on http://localhost:8080'));\""
+  },
+  "keywords": ["visualization", "d3", "frontend-architecture", "dependency-graph", "circular-dependency"],
+  "license": "MIT"
+}
